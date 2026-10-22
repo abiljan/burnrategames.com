@@ -53,6 +53,17 @@
   const button = form.querySelector('button');
   const say = (msg, kind) => { status.textContent = msg; status.dataset.kind = kind || ''; };
 
+  // Kit's double opt-in confirmation redirects here with ?confirmed=1.
+  if (new URLSearchParams(location.search).get('confirmed') === '1') {
+    const done = document.createElement('div');
+    done.className = 'signup';
+    done.setAttribute('role', 'status');
+    done.innerHTML = '<p style="margin:0;font:400 clamp(1.5rem,5vw,2rem)/1.2 var(--marker);color:var(--pad)">You’re on the cap table.</p>'
+      + '<p class="consent" style="margin-top:.5rem">Early investors get first look at the burn.</p>';
+    form.replaceWith(done);
+    return;
+  }
+
   let busy = false;
 
   form.addEventListener('submit', async (e) => {
