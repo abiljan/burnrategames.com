@@ -40,10 +40,7 @@
       <input id="email" type="email" name="email_address" placeholder="you@startup.com" autocomplete="email" required>
       <button type="submit">Get early access</button>
     </div>
-    <div class="hp" aria-hidden="true">
-      <label for="website">Leave this empty</label>
-      <input id="website" type="text" name="website" tabindex="-1" autocomplete="off">
-    </div>
+    <div class="hp" aria-hidden="true"><input type="text" name="hp_x" tabindex="-1" autocomplete="off"></div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
     <p class="consent">Get launch news from Burn Rate Games. Unsubscribe anytime. <a href="privacy.html">Privacy</a></p>
   </form>
@@ -56,24 +53,30 @@
   const button = form.querySelector('button');
   const say = (msg, kind) => { status.textContent = msg; status.dataset.kind = kind || ''; };
 
+  let busy = false;
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (busy) return;
     const data = new FormData(form);
-    if (data.get('website')) { say('Check your inbox to confirm.', 'ok'); return; } // bot: drop silently
-    data.delete('website');
-    button.disabled = true;
+    if (data.get('hp_x')) { say('Check your inbox to confirm.', 'ok'); return; } // bot: drop silently
+    data.delete('hp_x');
+    busy = true;
+    button.setAttribute('aria-disabled', 'true');
     say('Sending…');
+    let json = {};
     try {
       const res = await fetch(form.action, { method: 'POST', body: data, headers: { Accept: 'application/json' } });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok || json.status !== 'success') throw new Error('kit');
-      form.reset();
-      say('Check your inbox to confirm.', 'ok');
-    } catch {
-      say('Something broke. Try again.', 'err');
-    } finally {
-      button.disabled = false;
+      json = await res.json().catch(() => ({}));
+      if (json.status === 'quarantined' && json.url) { location.href = json.url; return; } // Kit's captcha step
+      if (res.ok && json.status === 'success') { form.reset(); say('Check your inbox to confirm.', 'ok'); return; }
+    } catch {}
+    finally {
+      busy = false;
+      button.removeAttribute('aria-disabled');
     }
+    const kitError = (json.errors || [])[0];
+    say(typeof kitError === 'string' ? kitError : 'Something broke. Try again.', 'err');
   });
 })();
 </script>
